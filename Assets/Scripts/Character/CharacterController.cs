@@ -12,6 +12,8 @@ public class CharacterController : MonoBehaviour
     public CharacterControllerSettings settings;
     public LayerMask groundMask;
     public float weight;
+    [Range(0.1f, 1f)]
+    public float groundFriction;
 
     [Space]
     [Header("Turn Forces")]
@@ -29,8 +31,8 @@ public class CharacterController : MonoBehaviour
     private PhysicsTools.RaycastHitPlus[] cgCastHits;
     private GroundContactPoint[] cgContacts;
     private GroundContactPoint[] cgActiveContacts;
-    private float cgSlopeValue;
-    private float cgGroundInfluence;
+    private Vector3 currentGroundNormal;
+    private float currentGroundInfluence;
 
     private float colliderRadius => characterBody.radius;
     private Vector3 colliderSphereBottomCenter => colliderBottom + Vector3.up * colliderRadius;
@@ -39,7 +41,16 @@ public class CharacterController : MonoBehaviour
             characterBody.bounds.extents.y;
 
     //velocity
-    private Vector3 forceGravity;
+    private Vector3 currentGravityForce;
+    /// <summary>
+    /// Virtual direction is a spherical interpolated vector that is only used to calculate
+    /// the magnitude of the currentMovementForce by the angle between desired goal and this, 
+    /// not the direction.
+    /// </summary>
+    private Vector3 currentVirtualMovementSpherical;
+    private Vector3 currentVirtualMovementLinear;
+    private Vector3 currentMovementForce;
+    private Vector3 currentRotation;
 
     [System.Serializable]       
     public class Force
@@ -62,6 +73,8 @@ public class CharacterController : MonoBehaviour
 
         public bool Applying => Time.time - lastTimeApplied <= Time.deltaTime * 1.5f;
         public Vector3 CurrentForce => currentDirection.normalized * currentVelocity;
+        public Vector3 GoalDirection => goalDirection;
+        public float GoalVelocity => goalVelocity;  
 
         public void Apply(Vector3 direction, float velocityMultiplier = 1f)
         {
@@ -196,45 +209,107 @@ public class CharacterController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        StepGrounded();
-        StepMovement();
+        UpdateForces();
 
-        Vector3 currentMovementForce = forceMovement.CurrentForce;
-        forceGravity += Vector3.down * weight * Time.fixedDeltaTime;
+        UpdateGrounded();
+        
+        //UPDATE GRAVITY FORCE
 
+        Vector3 gravityStep = Vector3.down * weight * Time.fixedDeltaTime;
+        currentGravityForce += gravityStep;
+        currentGravityForce -= gravityStep * 
+            settings.groundInfluenceCurve.Evaluate(currentGroundInfluence); 
+        
         if (Grounded)
         {
             StickToGround();
-            forceGravity = Vector3.zero;
-            //currentMovementForce = Vector3.ProjectOnPlane(currentMovementForce, GroundNormal);
+            currentGravityForce = Vector3.zero;            
         }
 
+        //UPDATE MOVEMENT FORCE
 
-        rigidBody.rotation = Quaternion.LookRotation(turnMovement.CurrentForce.normalized);
-        rigidBody.velocity = forceGravity + currentMovementForce;
+        float currentVelocityNormalized = currentMovementForce.magnitude / forceMovement.maxVelocity;
+        float inputMovementOffsetAngle = Vector3.Angle(currentVirtualMovementSpherical, forceMovement.GoalDirection);
+        float inertia = 
+            1f - settings.intertiaSwitchDirectionCurve.Evaluate(inputMovementOffsetAngle / 180f);
+        float currentFriction = groundFriction * 20f * inertia;
+
+        currentVirtualMovementSpherical = Vector3.Slerp(currentVirtualMovementSpherical,
+            forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
+        currentVirtualMovementLinear = Vector3.Lerp(currentVirtualMovementLinear,
+            forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
+
+        float currentMovementMagnitude = 
+            Vector3.Project
+            (
+            currentVirtualMovementSpherical.normalized,
+            forceMovement.GoalDirection
+            ).magnitude;
+
+        currentMovementForce = currentVirtualMovementLinear * currentMovementMagnitude;
+
+        if (debug)
+        {
+            DebugDraw.Draw(() => 
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(colliderPosition, colliderPosition + currentMovementForce * 0.5f);
+                Gizmos.DrawSphere(colliderPosition + currentMovementForce * 0.5f, 0.1f);
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawLine(colliderPosition, colliderPosition + forceMovement.GoalDirection * 5f);
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(colliderPosition, colliderPosition + currentVirtualMovementSpherical.normalized * 5f);
+            });
+        }
+
+        if (Grounded)
+        {
+            currentMovementForce =
+                    Vector3.ProjectOnPlane(currentMovementForce, currentGroundNormal).normalized
+                    * currentMovementForce.magnitude;
+        }
+
+        //UPDATE ROTATION
+
+        if (currentVirtualMovementSpherical.sqrMagnitude > 1f)
+            currentRotation = currentVirtualMovementSpherical;
+        currentRotation.y = 0f;
+        currentRotation.Normalize();
+
+        //APPLY ALL
+
+        rigidBody.rotation = Quaternion.LookRotation(currentRotation);
+        rigidBody.velocity = currentGravityForce + currentMovementForce;
     }
 
-    protected void StepGrounded ()
+    protected void UpdateGrounded ()
     {
         CheckGroundedSphereCast();
-        float groundAmount = GetGroundedAmount();
-        Grounded = groundAmount > settings.groundAmountThreshold;
+        UpdateGroundInfluence();
+        Grounded = currentGroundInfluence > settings.groundAmountThreshold;
     }
-    protected void StepMovement()
+    protected void UpdateForces()
     {
         forceMovement.FixedUpdate();
         turnMovement.FixedUpdate();
     }
-    protected float GetGroundedAmount ()
+    protected void UpdateGroundInfluence ()
     {
-        //if (!cgActiveContact.contact) return 0f;
+        float groundInfluence = 0f;
+        Vector3 averageGroundNormal = Vector3.zero;
 
-        //cgSlopeValue =  slopeValueCurve.Evaluate(cgActiveContact.slope/maxSlope);
-        //cgContactPointValue = contactPointsCurve.Evaluate((float)cgActiveContactsAmount/cgContactPool);
-        //cgContactPointValue *= 2f;
+        for (int i = 0; i < cgActiveContacts.Length; i++)
+        {
+            groundInfluence += cgActiveContacts[i] != null ? cgActiveContacts[i].influence : 0f;
+            averageGroundNormal += cgActiveContacts[i] != null ? cgActiveContacts[i].normal : Vector3.zero;
+        }
 
-        //cgGroundedValue = (cgSlopeValue + cgContactPointValue) / 3f;
-        return 1f;
+        groundInfluence /= settings.cgMaxActivePoints;
+        averageGroundNormal /= settings.cgMaxActivePoints;
+        averageGroundNormal.Normalize();
+
+        currentGroundInfluence = groundInfluence;
+        currentGroundNormal = averageGroundNormal;
     }
     protected void CheckGroundedSphereCast()
     {
@@ -318,18 +393,13 @@ public class CharacterController : MonoBehaviour
     }
     protected void StickToGround ()
     {
-        //Vector3 heightDelta = cgActiveContact.worldPosition - colliderSphereBottomCenter;
-        //heightDelta.y += 0;
-        //heightDelta.x = 0f;
-        //heightDelta.z = 0f;
+        Vector3 bestContactPoint = cgActiveContacts[0].worldPosition;
+        Vector3 heightDelta = bestContactPoint - colliderSphereBottomCenter;
+        heightDelta.y += settings.groundOffset;
+        heightDelta.x = 0f;
+        heightDelta.z = 0f;
 
-        //DebugDraw.Draw(() =>
-        //{
-        //    Gizmos.color = Color.red;
-        //    Gizmos.DrawSphere(GroundContactPont, 0.1f);
-        //});
-
-        //rigidBody.position += heightDelta;
+        rigidBody.position += heightDelta;
     }
 
     public void InputMove (Vector3 direction, float velocity, float factor)
@@ -343,4 +413,6 @@ public class CharacterController : MonoBehaviour
     {
         turnMovement.Apply(lookDirection);
     }
+    public void InputJump () { }
+    public void InputExternalForce() { }
 }

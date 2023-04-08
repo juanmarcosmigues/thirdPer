@@ -16,13 +16,73 @@ MonoBehaviour:
   cgSphereRayResolution: 8
   cgSphereRayDensityResolution: 3
   cgMaxActivePoints: 3
-  groundAmountThreshold: 0
+  groundAmountThreshold: 0.6
   maxDetectSlope: 70
   maxGroundSlope: 50
   groundInfluenceCurve:
     serializedVersion: 2
-    m_Curve: []
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.39728066
+      value: 0
+      inSlope: 0
+      outSlope: 6.0711694
+      tangentMode: 1
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.070822984
+    - serializedVersion: 3
+      time: 0.69885194
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.10440196
+      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
   groundOffset: 0.05
+  intertiaSwitchDirectionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0.021664673
+      outSlope: 0.021664673
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.08995327
+    - serializedVersion: 3
+      time: 1
+      value: 0.94
+      inSlope: -0.017043758
+      outSlope: -0.017043758
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.092443764
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

@@ -21,4 +21,6 @@ public class CharacterControllerSettings : ScriptableObject
     [Header("On grounded variables")]
     public float groundOffset = 0.05f;
 
+    [Header("Movement variables")]
+    public AnimationCurve intertiaSwitchDirectionCurve;
 }
