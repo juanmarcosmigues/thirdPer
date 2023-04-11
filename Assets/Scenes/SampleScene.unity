@@ -471,7 +471,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 179192412}
   m_LocalRotation: {x: 0.045768425, y: -0, z: -0, w: 0.99895215}
-  m_LocalPosition: {x: 20.71, y: -2.01, z: 18}
+  m_LocalPosition: {x: 20.71, y: -2.01, z: -9.45}
   m_LocalScale: {x: 19.16187, y: 5.6377, z: 41.29953}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2083,7 +2083,44 @@ MonoBehaviour:
     turnAceleration: 20
     turnDeceleration: 2
     sphericalInterpolation: 0
-  debug: 0
+  inputForceMovement:
+    acceleration: 80
+    deceleration: 100
+    maxVelocity: 15
+    inertia: 5
+    inertiaCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: -0.0254352
+        outSlope: -0.0254352
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0.093457945
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1.8302382
+        outSlope: 1.8302382
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.050233662
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    inertiaInfluenceOnAngle:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    sphericalInterpolation: 1
+    debug: 1
+  debug: 1
 --- !u!54 &1871213537
 Rigidbody:
   m_ObjectHideFlags: 0

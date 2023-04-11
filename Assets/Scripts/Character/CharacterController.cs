@@ -20,11 +20,13 @@ public class CharacterController : MonoBehaviour
     public Force turnMovement;
     [Header("Forces")]
     public Force forceMovement;
+    public VirtualForce inputForceMovement;
 
     [Space]
     [Header("Debug")]
     public bool debug = false;
 
+    public event System.Action OnFixedUpdate;
     public bool Grounded { get; private set; }
 
     //Storage
@@ -192,6 +194,8 @@ public class CharacterController : MonoBehaviour
     private void Awake()
     {
         InitiateCG();
+
+        OnFixedUpdate += inputForceMovement.Step;
     }
 
     protected void InitiateCG ()
@@ -209,7 +213,7 @@ public class CharacterController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        UpdateForces();
+        OnFixedUpdate?.Invoke();
 
         UpdateGrounded();
         
@@ -228,39 +232,48 @@ public class CharacterController : MonoBehaviour
 
         //UPDATE MOVEMENT FORCE
 
-        float currentVelocityNormalized = currentMovementForce.magnitude / forceMovement.maxVelocity;
-        float inputMovementOffsetAngle = Vector3.Angle(currentVirtualMovementSpherical, forceMovement.GoalDirection);
-        float inertia = 
-            1f - settings.intertiaSwitchDirectionCurve.Evaluate(inputMovementOffsetAngle / 180f);
-        float currentFriction = groundFriction * 20f * inertia;
+        //float currentVelocityNormalized = 
+        //    currentMovementForce.magnitude / forceMovement.maxVelocity;
+        //float inputMovementOffsetAngle = 
+        //    Vector3.Angle(currentVirtualMovementSpherical, forceMovement.GoalDirection);
+        //float inertia =
+        //    Mathf.Lerp(
+        //    1f,
+        //    1f - settings.inertiaSwitchDirectionCurve.
+        //    Evaluate(inputMovementOffsetAngle / 180f),
+        //    settings.inertiaVelocityInfluenceCurve.
+        //    Evaluate(currentVelocityNormalized)
+        //    ); 
+        //float currentFriction = 
+        //    groundFriction * 20f * inertia;
 
-        currentVirtualMovementSpherical = Vector3.Slerp(currentVirtualMovementSpherical,
-            forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
-        currentVirtualMovementLinear = Vector3.Lerp(currentVirtualMovementLinear,
-            forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
+        //currentVirtualMovementSpherical = Vector3.Slerp(currentVirtualMovementSpherical,
+        //    forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
+        //currentVirtualMovementLinear = Vector3.Lerp(currentVirtualMovementLinear,
+        //    forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
 
-        float currentMovementMagnitude = 
-            Vector3.Project
-            (
-            currentVirtualMovementSpherical.normalized,
-            forceMovement.GoalDirection
-            ).magnitude;
+        //float currentMovementMagnitude = 
+        //    Vector3.Project
+        //    (
+        //    currentVirtualMovementSpherical.normalized,
+        //    forceMovement.GoalDirection
+        //    ).magnitude;
 
-        currentMovementForce = currentVirtualMovementLinear * currentMovementMagnitude;
+        currentMovementForce = inputForceMovement.CurrentForce;
 
-        if (debug)
-        {
-            DebugDraw.Draw(() => 
-            {
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(colliderPosition, colliderPosition + currentMovementForce * 0.5f);
-                Gizmos.DrawSphere(colliderPosition + currentMovementForce * 0.5f, 0.1f);
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawLine(colliderPosition, colliderPosition + forceMovement.GoalDirection * 5f);
-                Gizmos.color = Color.green;
-                Gizmos.DrawLine(colliderPosition, colliderPosition + currentVirtualMovementSpherical.normalized * 5f);
-            });
-        }
+        //if (debug)
+        //{
+        //    DebugDraw.Draw(() => 
+        //    {
+        //        Gizmos.color = Color.red;
+        //        Gizmos.DrawLine(colliderPosition, colliderPosition + currentMovementForce * 0.5f);
+        //        Gizmos.DrawSphere(colliderPosition + currentMovementForce * 0.5f, 0.1f);
+        //        Gizmos.color = Color.yellow;
+        //        Gizmos.DrawLine(colliderPosition, colliderPosition + forceMovement.GoalDirection * 5f);
+        //        Gizmos.color = Color.green;
+        //        Gizmos.DrawLine(colliderPosition, colliderPosition + currentVirtualMovementSpherical.normalized * 5f);
+        //    });
+        //}
 
         if (Grounded)
         {
@@ -287,11 +300,6 @@ public class CharacterController : MonoBehaviour
         CheckGroundedSphereCast();
         UpdateGroundInfluence();
         Grounded = currentGroundInfluence > settings.groundAmountThreshold;
-    }
-    protected void UpdateForces()
-    {
-        forceMovement.FixedUpdate();
-        turnMovement.FixedUpdate();
     }
     protected void UpdateGroundInfluence ()
     {
@@ -402,12 +410,14 @@ public class CharacterController : MonoBehaviour
         rigidBody.position += heightDelta;
     }
 
+    #region Input
+
     public void InputMove (Vector3 direction, float velocity, float factor)
     {
         Vector3 moveOutput = direction;
         moveOutput = moveOutput.normalized * velocity;
 
-        forceMovement.Apply(moveOutput, factor);
+        inputForceMovement.Apply(moveOutput, factor);
     }
     public void InputTurn (Vector3 lookDirection)
     {
@@ -415,4 +425,6 @@ public class CharacterController : MonoBehaviour
     }
     public void InputJump () { }
     public void InputExternalForce() { }
+
+    #endregion
 }

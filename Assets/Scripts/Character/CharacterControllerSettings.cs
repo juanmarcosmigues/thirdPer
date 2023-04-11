@@ -22,5 +22,6 @@ public class CharacterControllerSettings : ScriptableObject
     public float groundOffset = 0.05f;
 
     [Header("Movement variables")]
-    public AnimationCurve intertiaSwitchDirectionCurve;
+    public AnimationCurve inertiaSwitchDirectionCurve;
+    public AnimationCurve inertiaVelocityInfluenceCurve;
 }

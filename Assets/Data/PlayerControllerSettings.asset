@@ -62,26 +62,50 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   groundOffset: 0.05
-  intertiaSwitchDirectionCurve:
+  inertiaSwitchDirectionCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
       value: 0
-      inSlope: 0.021664673
-      outSlope: 0.021664673
+      inSlope: 2.5651495
+      outSlope: 2.5651495
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0.08995327
+      outWeight: 0.039719626
     - serializedVersion: 3
       time: 1
-      value: 0.94
-      inSlope: -0.017043758
-      outSlope: -0.017043758
+      value: 0.96
+      inSlope: 0
+      outSlope: 0
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0.092443764
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  inertiaVelocityInfluenceCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 2.8542614
+      outSlope: 2.8542614
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.033878505
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0.037386525
+      outSlope: 0.037386525
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.063084126
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
