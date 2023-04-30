@@ -16,11 +16,8 @@ public class CharacterController : MonoBehaviour
     public float groundFriction;
 
     [Space]
-    [Header("Turn Forces")]
-    public Force turnMovement;
     [Header("Forces")]
-    public Force forceMovement;
-    public VirtualForce inputForceMovement;
+    public MovementForce inputForceMovement;
 
     [Space]
     [Header("Debug")]
@@ -421,7 +418,7 @@ public class CharacterController : MonoBehaviour
     }
     public void InputTurn (Vector3 lookDirection)
     {
-        turnMovement.Apply(lookDirection);
+        //turnMovement.Apply(lookDirection);
     }
     public void InputJump () { }
     public void InputExternalForce() { }
