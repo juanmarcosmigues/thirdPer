@@ -16,8 +16,14 @@ public class CharacterController : MonoBehaviour
     public float groundFriction;
 
     [Space]
-    [Header("Forces")]
+    [Header("Movement Force")]
     public MovementForce inputForceMovement;
+
+    [Space]
+    [Header("Jump Force")]
+    [Range(0f, 1f)]
+    public float jumpGravityInfluence;
+    public float jumpForce;
 
     [Space]
     [Header("Debug")]
@@ -41,84 +47,12 @@ public class CharacterController : MonoBehaviour
 
     //velocity
     private Vector3 currentGravityForce;
-    /// <summary>
-    /// Virtual direction is a spherical interpolated vector that is only used to calculate
-    /// the magnitude of the currentMovementForce by the angle between desired goal and this, 
-    /// not the direction.
-    /// </summary>
-    private Vector3 currentVirtualMovementSpherical;
-    private Vector3 currentVirtualMovementLinear;
     private Vector3 currentMovementForce;
     private Vector3 currentRotation;
 
-    [System.Serializable]       
-    public class Force
-    {
-        public float acceleration;
-        public float deceleration;
-        public float maxVelocity;
-        public float turnAceleration;
-        public float turnDeceleration;
-        public bool sphericalInterpolation;
-
-        private float lastTimeApplied;
-        private float timeApplying;
-        private float currentTurnFactor;
-        private float currentVelocity;
-        private Vector3 currentDirection;
-
-        private Vector3 goalDirection;
-        private float goalVelocity;
-
-        public bool Applying => Time.time - lastTimeApplied <= Time.deltaTime * 1.5f;
-        public Vector3 CurrentForce => currentDirection.normalized * currentVelocity;
-        public Vector3 GoalDirection => goalDirection;
-        public float GoalVelocity => goalVelocity;  
-
-        public void Apply(Vector3 direction, float velocityMultiplier = 1f)
-        {
-            lastTimeApplied = Time.time;
-            goalDirection = direction;
-            goalVelocity = maxVelocity * velocityMultiplier;
-        }
-
-        public void FixedUpdate()
-        {
-            if (Applying)
-            {
-                timeApplying += Time.fixedDeltaTime;
-
-                currentTurnFactor = Mathf.Clamp01
-                    (currentTurnFactor + turnAceleration * Time.fixedDeltaTime);
-
-                currentVelocity = Mathf.Lerp
-                    (currentVelocity, goalVelocity, acceleration * Time.fixedDeltaTime);
-                currentDirection = 
-                    sphericalInterpolation ?
-                    Vector3.Slerp
-                    (currentDirection, goalDirection, turnAceleration * Time.fixedDeltaTime) 
-                    :
-                    Vector3.Lerp
-                    (currentDirection, goalDirection, turnAceleration * Time.fixedDeltaTime);
-            }
-            else
-            {
-                timeApplying = 0f;
-
-                currentTurnFactor = Mathf.Clamp01
-                    (currentTurnFactor - turnDeceleration * Time.fixedDeltaTime);
-
-                currentVelocity = Mathf.Lerp
-                    (currentVelocity, 0f, deceleration * Time.fixedDeltaTime);
-                currentDirection = sphericalInterpolation ?
-                    Vector3.Slerp
-                    (currentDirection, goalDirection, (turnAceleration * Time.fixedDeltaTime) * currentTurnFactor)
-                    :
-                    Vector3.Lerp
-                    (currentDirection, goalDirection, (turnAceleration * Time.fixedDeltaTime) * currentTurnFactor);
-            }
-        }
-    }
+    //jump
+    private Timestamp timeJump;
+    private Vector3 currentJumpForce;
 
     [System.Serializable]
     public class GroundContactPoint
@@ -220,60 +154,21 @@ public class CharacterController : MonoBehaviour
         currentGravityForce += gravityStep;
         currentGravityForce -= gravityStep * 
             settings.groundInfluenceCurve.Evaluate(currentGroundInfluence); 
-        
-        if (Grounded)
-        {
-            StickToGround();
-            currentGravityForce = Vector3.zero;            
-        }
 
         //UPDATE MOVEMENT FORCE
 
-        //float currentVelocityNormalized = 
-        //    currentMovementForce.magnitude / forceMovement.maxVelocity;
-        //float inputMovementOffsetAngle = 
-        //    Vector3.Angle(currentVirtualMovementSpherical, forceMovement.GoalDirection);
-        //float inertia =
-        //    Mathf.Lerp(
-        //    1f,
-        //    1f - settings.inertiaSwitchDirectionCurve.
-        //    Evaluate(inputMovementOffsetAngle / 180f),
-        //    settings.inertiaVelocityInfluenceCurve.
-        //    Evaluate(currentVelocityNormalized)
-        //    ); 
-        //float currentFriction = 
-        //    groundFriction * 20f * inertia;
-
-        //currentVirtualMovementSpherical = Vector3.Slerp(currentVirtualMovementSpherical,
-        //    forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
-        //currentVirtualMovementLinear = Vector3.Lerp(currentVirtualMovementLinear,
-        //    forceMovement.CurrentForce, currentFriction * Time.fixedDeltaTime);
-
-        //float currentMovementMagnitude = 
-        //    Vector3.Project
-        //    (
-        //    currentVirtualMovementSpherical.normalized,
-        //    forceMovement.GoalDirection
-        //    ).magnitude;
-
         currentMovementForce = inputForceMovement.CurrentForce;
 
-        //if (debug)
-        //{
-        //    DebugDraw.Draw(() => 
-        //    {
-        //        Gizmos.color = Color.red;
-        //        Gizmos.DrawLine(colliderPosition, colliderPosition + currentMovementForce * 0.5f);
-        //        Gizmos.DrawSphere(colliderPosition + currentMovementForce * 0.5f, 0.1f);
-        //        Gizmos.color = Color.yellow;
-        //        Gizmos.DrawLine(colliderPosition, colliderPosition + forceMovement.GoalDirection * 5f);
-        //        Gizmos.color = Color.green;
-        //        Gizmos.DrawLine(colliderPosition, colliderPosition + currentVirtualMovementSpherical.normalized * 5f);
-        //    });
-        //}
+        //UPDATE JUMP FORCE
 
-        if (Grounded)
+        currentJumpForce += gravityStep * jumpGravityInfluence;
+        currentJumpForce.y = Mathf.Clamp(currentJumpForce.y, 0, Mathf.Infinity);
+
+        if (Grounded && timeJump.time > 0.2f)
         {
+            StickToGround();
+            currentJumpForce = Vector3.zero;
+            currentGravityForce = Vector3.zero;
             currentMovementForce =
                     Vector3.ProjectOnPlane(currentMovementForce, currentGroundNormal).normalized
                     * currentMovementForce.magnitude;
@@ -281,17 +176,23 @@ public class CharacterController : MonoBehaviour
 
         //UPDATE ROTATION
 
-        if (currentVirtualMovementSpherical.sqrMagnitude > 1f)
-            currentRotation = currentVirtualMovementSpherical;
         currentRotation.y = 0f;
         currentRotation.Normalize();
 
         //APPLY ALL
 
         rigidBody.rotation = Quaternion.LookRotation(currentRotation);
-        rigidBody.velocity = currentGravityForce + currentMovementForce;
+        rigidBody.velocity = currentGravityForce + currentMovementForce + currentJumpForce;
     }
 
+
+    public void Jump ()
+    {
+        currentJumpForce = Vector3.up * jumpForce;
+        timeJump.Set();
+    }
+
+    #region Ground Logic
     protected void UpdateGrounded ()
     {
         CheckGroundedSphereCast();
@@ -407,6 +308,8 @@ public class CharacterController : MonoBehaviour
         rigidBody.position += heightDelta;
     }
 
+    #endregion
+
     #region Input
 
     public void InputMove (Vector3 direction, float velocity, float factor)
@@ -420,7 +323,10 @@ public class CharacterController : MonoBehaviour
     {
         //turnMovement.Apply(lookDirection);
     }
-    public void InputJump () { }
+    public void InputJump () 
+    {
+        Jump();
+    }
     public void InputExternalForce() { }
 
     #endregion

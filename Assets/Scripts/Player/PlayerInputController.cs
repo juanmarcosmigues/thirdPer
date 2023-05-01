@@ -36,6 +36,11 @@ public class PlayerInputController : MonoBehaviour
         inputActions.Disable();
     }
 
+    private void Start()
+    {
+        iaAction.performed += ActionButtonPressed;
+    }
+
     private void Update()
     {
         ivMove = iaMove.ReadValue<Vector2>();
@@ -45,5 +50,10 @@ public class PlayerInputController : MonoBehaviour
         {
             controller.Move(direction, valueMovementAxis);
         }
+    }
+
+    protected void ActionButtonPressed (InputAction.CallbackContext c)
+    {
+        controller.Jump();
     }
 }

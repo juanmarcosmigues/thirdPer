@@ -2165,6 +2165,8 @@ MonoBehaviour:
     heavyTurnAngleThreshold: 95
     heavyTurnVelocityThreshold: 0.5
     heavyTurnDuration: 1.5
+  jumpGravityInfluence: 0.4
+  jumpForce: 22
   debug: 1
 --- !u!54 &1871213537
 Rigidbody:

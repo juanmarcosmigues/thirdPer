@@ -10,6 +10,11 @@ public class PlayerController : MonoBehaviour
     {
 
     }
+    public void Jump ()
+    {
+        Debug.Log("JUMP");
+        characterController.Jump();
+    }
     public void Move (Vector3 direction, float velocity)
     {
         characterController.InputMove(direction, velocity, 1f);
